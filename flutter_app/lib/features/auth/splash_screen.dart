@@ -3,7 +3,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/services/firebase_auth_service.dart';
 import '../../core/utils/responsive.dart';
+import '../shell/admin_shell.dart';
+import '../shell/user_shell.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -15,6 +18,8 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
+  final FirebaseAuthService _authService = FirebaseAuthService();
+
   late final AnimationController _controller;
   Timer? _timer;
 
@@ -26,11 +31,38 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(seconds: 4),
     )..repeat();
 
-    _timer = Timer(const Duration(milliseconds: 2400), () {
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    await Future<void>.delayed(const Duration(milliseconds: 1800));
+    if (!mounted) return;
+
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) {
+      _goTo(const LoginScreen());
+      return;
+    }
+
+    final profile = await _authService.getCurrentUserProfile();
+    if (!mounted) return;
+
+    final role = (profile?['role'] ?? 'user').toString().toLowerCase();
+    if (role == 'admin') {
+      _goTo(const AdminShell());
+      return;
+    }
+
+    _goTo(const UserShell());
+  }
+
+  void _goTo(Widget screen) {
+    _timer?.cancel();
+    _timer = Timer(Duration.zero, () {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => screen),
       );
     });
   }
@@ -155,7 +187,8 @@ class _AuraPainter extends CustomPainter {
     final r = size.width * 0.34;
 
     for (double a = 0; a < math.pi * 2; a += 0.05) {
-      final wobble = math.sin((a * 3) + (progress * math.pi * 2)) * (size.width * 0.038);
+      final wobble =
+          math.sin((a * 3) + (progress * math.pi * 2)) * (size.width * 0.038);
       final x = center.dx + math.cos(a) * (r + wobble);
       final y = center.dy + math.sin(a) * (r + wobble);
 

@@ -67,35 +67,48 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void _showInfoSheet(String title, String message) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: const Color(0xFF342E2C),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
+        return SafeArea(
+          top: false,
+          child: SizedBox(
+            width: double.infinity,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                18,
+                20,
+                MediaQuery.of(context).viewInsets.bottom + 26,
               ),
-              const SizedBox(height: 10),
-              Text(
-                message,
-                style: const TextStyle(
-                  color: Color(0xFFD3C3BC),
-                  fontSize: 14,
-                  height: 1.5,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      color: Color(0xFFD3C3BC),
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
@@ -114,78 +127,103 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF342E2C),
       isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: const Color(0xFF342E2C),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         final compact = Responsive.isCompact(context);
 
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            18,
-            20,
-            MediaQuery.of(context).viewInsets.bottom + 28,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        return SafeArea(
+          top: false,
+          child: SizedBox(
+            width: double.infinity,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                18,
+                20,
+                MediaQuery.of(context).viewInsets.bottom + 28,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: compact ? 22 : 24,
-                    backgroundColor: const Color(0xFF554640),
-                    child: Text(
-                      user.initials,
-                      style: TextStyle(
-                        color: const Color(0xFFFFE6D9),
-                        fontWeight: FontWeight.w800,
-                        fontSize: compact ? 14 : 15,
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: compact ? 22 : 24,
+                        backgroundColor: const Color(0xFF554640),
+                        child: Text(
+                          user.initials,
+                          style: TextStyle(
+                            color: const Color(0xFFFFE6D9),
+                            fontWeight: FontWeight.w800,
+                            fontSize: compact ? 14 : 15,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          user.name,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: compact ? 17 : 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  _DetailRow(
+                    label: 'Email',
+                    value: user.email,
+                    compact: compact,
+                  ),
+                  _DetailRow(
+                    label: 'Role',
+                    value: user.role.toUpperCase(),
+                    compact: compact,
+                  ),
+                  _DetailRow(
+                    label: 'Joined',
+                    value: user.createdAt,
+                    compact: compact,
+                  ),
+                  _DetailRow(
+                    label: 'Cyber Score',
+                    value: scoreText,
+                    compact: compact,
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 10 : 12,
+                      vertical: compact ? 7 : 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withOpacity(0.14),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: badgeColor.withOpacity(0.40),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
                     child: Text(
-                      user.name,
+                      user.statusLabel,
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: compact ? 17 : 18,
+                        color: badgeColor,
+                        fontSize: compact ? 12 : 12.5,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
-              _DetailRow(label: 'Email', value: user.email, compact: compact),
-              _DetailRow(label: 'Role', value: user.role.toUpperCase(), compact: compact),
-              _DetailRow(label: 'Joined', value: user.createdAt, compact: compact),
-              _DetailRow(label: 'Cyber Score', value: scoreText, compact: compact),
-              const SizedBox(height: 14),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: compact ? 10 : 12,
-                  vertical: compact ? 7 : 8,
-                ),
-                decoration: BoxDecoration(
-                  color: badgeColor.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: badgeColor.withOpacity(0.40)),
-                ),
-                child: Text(
-                  user.statusLabel,
-                  style: TextStyle(
-                    color: badgeColor,
-                    fontSize: compact ? 12 : 12.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -226,7 +264,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFF5B4740),
                 borderRadius: BorderRadius.circular(compact ? 20 : 22),
-                border: Border.all(color: const Color(0xAAEAA27F), width: 1.2),
+                border: Border.all(
+                  color: const Color(0xAAEAA27F),
+                  width: 1.2,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFFF2A47F).withOpacity(0.18),
@@ -398,7 +439,8 @@ class _AdminUser {
   final int? cyberScore;
 
   String get initials {
-    final parts = name.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    final parts =
+        name.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
     if (parts.isEmpty) return 'U';
     if (parts.length == 1) return parts.first[0].toUpperCase();
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
@@ -453,7 +495,9 @@ class _MetricCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFF2A47F).withOpacity(selected ? 0.14 : 0.06),
+              color: const Color(0xFFF2A47F).withOpacity(
+                selected ? 0.14 : 0.06,
+              ),
               blurRadius: 12,
             ),
           ],
@@ -575,7 +619,8 @@ class _UserTile extends StatelessWidget {
       _ => const Color(0xFFFFCEB6),
     };
 
-    final scoreText = user.cyberScore != null ? 'Score ${user.cyberScore}' : 'Score N/A';
+    final scoreText =
+        user.cyberScore != null ? 'Score ${user.cyberScore}' : 'Score N/A';
 
     return GestureDetector(
       onTap: onTap,
