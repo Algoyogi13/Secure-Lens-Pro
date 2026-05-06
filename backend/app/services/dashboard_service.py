@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from app.services.cyber_score import calculate_cyber_score
 from app.services.firebase_service import get_firestore_client
 
 DANGER_LEVELS = {"high", "critical", "phishing", "danger"}
-WARNING_LEVELS = {"warning", "medium", "suspicious"}
 
 
 def get_admin_metrics() -> dict:
     try:
         db = get_firestore_client()
-        user_docs = [doc.to_dict() or {} for doc in db.collection("users").stream()]
+        user_snapshots = list(db.collection("users").stream())
         scan_docs = [doc.to_dict() or {} for doc in db.collection("scan_results").stream()]
     except Exception as error:
         print(f"Failed to load admin metrics: {error}")
@@ -22,28 +22,32 @@ def get_admin_metrics() -> dict:
             "average_cyber_score": 0,
         }
 
-    user_entries = [
-        user for user in user_docs
-        if str(user.get("role", "user")).lower() != "admin"
-    ]
+    user_entries = []
+    for snapshot in user_snapshots:
+        data = snapshot.to_dict() or {}
+        if str(data.get("role", "user")).lower() == "admin":
+            continue
+
+        score_result = calculate_cyber_score(user_id=snapshot.id)
+        score = int(score_result.get("cyber_score", 0))
+        risk_level = _risk_from_score(score)
+
+        user_entries.append(
+            {
+                "id": snapshot.id,
+                "score": score,
+                "risk_level": risk_level,
+            }
+        )
 
     total_users = len(user_entries)
+    high_risk_users = len(
+        [user for user in user_entries if user["risk_level"] == "high"]
+    )
 
-    high_risk_users = 0
-    explicit_scores: list[float] = []
+    scores = [user["score"] for user in user_entries if user["score"] > 0]
+    average_cyber_score = round(sum(scores) / len(scores)) if scores else 0
 
-    for user in user_entries:
-        score = _coerce_score(user.get("cyberScore"))
-        risk_level = _resolve_risk_level(score, str(user.get("riskLevel", "")))
-
-        if score is not None:
-            explicit_scores.append(float(score))
-
-        if risk_level == "high":
-            high_risk_users += 1
-
-    danger_scans = 0
-    warning_scans = 0
     recent_threats = 0
     week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
@@ -51,25 +55,12 @@ def get_admin_metrics() -> dict:
         level = str(scan.get("riskLevel") or scan.get("risk_level") or "").lower()
         created_at = scan.get("createdAt") or scan.get("created_at")
 
-        if level in DANGER_LEVELS:
-            danger_scans += 1
-        elif level in WARNING_LEVELS:
-            warning_scans += 1
-
         if isinstance(created_at, datetime):
             if created_at.tzinfo is None:
                 created_at = created_at.replace(tzinfo=timezone.utc)
 
             if created_at >= week_ago and level in DANGER_LEVELS:
                 recent_threats += 1
-
-    if explicit_scores:
-        average_cyber_score = round(sum(explicit_scores) / len(explicit_scores))
-    else:
-        average_cyber_score = _estimate_score(danger_scans, warning_scans)
-
-    if high_risk_users == 0 and total_users > 0 and danger_scans > 0:
-        high_risk_users = min(total_users, danger_scans)
 
     return {
         "total_users": total_users,
@@ -96,8 +87,9 @@ def get_admin_users() -> dict:
         if role == "admin":
             continue
 
-        score = _coerce_score(data.get("cyberScore"))
-        risk_level = _resolve_risk_level(score, str(data.get("riskLevel", "")))
+        score_result = calculate_cyber_score(user_id=snapshot.id)
+        score = int(score_result.get("cyber_score", 0))
+        risk_level = _risk_from_score(score)
 
         users.append(
             {
@@ -106,7 +98,7 @@ def get_admin_users() -> dict:
                 "email": str(data.get("email", "")),
                 "role": role,
                 "photo_url": str(data.get("photoUrl", "")),
-                "cyber_score": round(score) if score is not None else None,
+                "cyber_score": score,
                 "risk_level": risk_level,
                 "status_label": _status_label(risk_level),
                 "created_at": _format_created_at(data.get("createdAt")),
@@ -123,44 +115,12 @@ def get_admin_users() -> dict:
     return {"users": users}
 
 
-def _estimate_score(danger_scans: int, warning_scans: int) -> int:
-    if danger_scans == 0 and warning_scans == 0:
-        return 0
-
-    score = 92 - (danger_scans * 8) - (warning_scans * 3)
-    return max(25, min(96, score))
-
-
-def _coerce_score(value) -> float | None:
-    if isinstance(value, (int, float)):
-        return float(value)
-
-    if isinstance(value, str):
-        try:
-            return float(value.strip())
-        except ValueError:
-            return None
-
-    return None
-
-
-def _resolve_risk_level(score: float | None, raw_level: str) -> str:
-    level = raw_level.strip().lower()
-
-    if level in DANGER_LEVELS:
-        return "high"
-    if level in WARNING_LEVELS:
-        return "medium"
-    if level in {"low", "safe", "clear"}:
+def _risk_from_score(score: int) -> str:
+    if score >= 80:
         return "low"
-
-    if score is None:
+    if score >= 60:
         return "medium"
-    if score < 60:
-        return "high"
-    if score < 80:
-        return "medium"
-    return "low"
+    return "high"
 
 
 def _status_label(risk_level: str) -> str:

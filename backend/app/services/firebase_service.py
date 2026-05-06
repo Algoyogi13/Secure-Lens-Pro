@@ -73,3 +73,32 @@ def save_assistant_activity(message: str, user_id: str | None = None) -> None:
             "createdAt": firestore.SERVER_TIMESTAMP,
         }
     )
+
+
+def update_user_score(
+    user_id: str,
+    cyber_score: int,
+    level: str,
+    risk_level: str,
+) -> None:
+    if not user_id:
+        return
+
+    try:
+        db = get_firestore_client()
+    except Exception as error:
+        print(f"Skipping user score update because config is incomplete: {error}")
+        return
+
+    try:
+        db.collection("users").doc(user_id).set(
+            {
+                "cyberScore": cyber_score,
+                "scoreLevel": level,
+                "riskLevel": risk_level,
+                "scoreUpdatedAt": firestore.SERVER_TIMESTAMP,
+            },
+            merge=True,
+        )
+    except Exception as error:
+        print(f"Failed to update user score for {user_id}: {error}")

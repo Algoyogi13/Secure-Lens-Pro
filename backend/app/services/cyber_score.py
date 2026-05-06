@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from app.services.firebase_service import get_firestore_client
+from app.services.firebase_service import get_firestore_client, update_user_score
 
 DANGER_LEVELS = {"high", "critical", "phishing", "danger"}
 WARNING_LEVELS = {"warning", "medium", "suspicious"}
@@ -16,7 +16,17 @@ def calculate_cyber_score(
         db = get_firestore_client()
         scan_docs = [doc.to_dict() or {} for doc in db.collection("scan_results").stream()]
         chat_docs = [doc.to_dict() or {} for doc in db.collection("assistant_activity").stream()]
-        return _calculate_live_score(scan_docs, chat_docs, user_id=user_id)
+        result = _calculate_live_score(scan_docs, chat_docs, user_id=user_id)
+
+        if user_id:
+            update_user_score(
+                user_id=user_id,
+                cyber_score=int(result["cyber_score"]),
+                level=str(result["level"]),
+                risk_level=_risk_band(int(result["cyber_score"])),
+            )
+
+        return result
     except Exception as error:
         print(f"Falling back to signal-based cyber score: {error}")
         return _calculate_fallback_score(signals or {})
@@ -130,3 +140,11 @@ def _score_level(score: int) -> str:
     if score >= 60:
         return "moderate"
     return "high-risk"
+
+
+def _risk_band(score: int) -> str:
+    if score >= 80:
+        return "low"
+    if score >= 60:
+        return "medium"
+    return "high"
