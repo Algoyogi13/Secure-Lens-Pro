@@ -66,7 +66,16 @@ class FirebaseAuthService {
           .doc(refreshedUser.uid)
           .get();
 
-      final role = (doc.data()?['role'] ?? 'user').toString();
+      final role = (doc.data()?['role'] ?? 'user').toString().toLowerCase();
+
+      if (role != 'admin' && !refreshedUser.emailVerified) {
+        await _auth.signOut();
+        return {
+          'success': false,
+          'message':
+              'Please verify your email before logging in. Check inbox or spam.',
+        };
+      }
 
       return {
         'success': true,
@@ -198,4 +207,3 @@ class FirebaseAuthService {
     }
   }
 }
-

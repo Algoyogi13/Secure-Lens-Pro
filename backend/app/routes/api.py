@@ -44,8 +44,11 @@ def verify_email_otp_route():
 def scan_email():
     payload = request.get_json(silent=True) or {}
     content = payload.get('content', '')
+    user_id = str(payload.get('user_id', '')).strip() or None
+
     result = hf_service.analyze_email(content)
-    save_scan_result('email', result)
+    save_scan_result('email', result, user_id=user_id)
+
     return jsonify(
         {
             'type': 'email',
@@ -60,8 +63,11 @@ def scan_email():
 def scan_url():
     payload = request.get_json(silent=True) or {}
     url = payload.get('url', '')
+    user_id = str(payload.get('user_id', '')).strip() or None
+
     result = hf_service.analyze_url(url)
-    save_scan_result('url', result)
+    save_scan_result('url', result, user_id=user_id)
+
     return jsonify(
         {
             'type': 'url',
@@ -76,6 +82,8 @@ def scan_url():
 def breach_check():
     payload = request.get_json(silent=True) or {}
     identifier = payload.get('identifier', '')
+    user_id = str(payload.get('user_id', '')).strip() or None
+
     result = lookup_breach(identifier)
 
     save_scan_result(
@@ -85,6 +93,7 @@ def breach_check():
             'summary': result.get('message', ''),
             **result,
         },
+        user_id=user_id,
     )
 
     return jsonify(result)
@@ -95,14 +104,18 @@ def breach_check():
 def chat():
     payload = request.get_json(silent=True) or {}
     message = payload.get('message', '')
-    save_assistant_activity(message)
+    user_id = str(payload.get('user_id', '')).strip() or None
+
+    save_assistant_activity(message, user_id=user_id)
     return jsonify(gemini_service.generate_chat_reply(message))
 
 
 @api_blueprint.route('/score', methods=['POST', 'OPTIONS'])
 @cross_origin()
 def score_user():
-    return jsonify(calculate_cyber_score())
+    payload = request.get_json(silent=True) or {}
+    user_id = str(payload.get('user_id', '')).strip() or None
+    return jsonify(calculate_cyber_score(user_id=user_id))
 
 
 @api_blueprint.get('/admin/metrics')

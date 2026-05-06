@@ -8,23 +8,33 @@ DANGER_LEVELS = {"high", "critical", "phishing", "danger"}
 WARNING_LEVELS = {"warning", "medium", "suspicious"}
 
 
-def calculate_cyber_score(signals: dict | None = None) -> dict:
+def calculate_cyber_score(
+    user_id: str | None = None,
+    signals: dict | None = None,
+) -> dict:
     try:
         db = get_firestore_client()
         scan_docs = [doc.to_dict() or {} for doc in db.collection("scan_results").stream()]
         chat_docs = [doc.to_dict() or {} for doc in db.collection("assistant_activity").stream()]
-        return _calculate_live_score(scan_docs, chat_docs)
+        return _calculate_live_score(scan_docs, chat_docs, user_id=user_id)
     except Exception as error:
         print(f"Falling back to signal-based cyber score: {error}")
         return _calculate_fallback_score(signals or {})
 
 
-def _calculate_live_score(scan_docs: list[dict], chat_docs: list[dict]) -> dict:
+def _calculate_live_score(
+    scan_docs: list[dict],
+    chat_docs: list[dict],
+    user_id: str | None = None,
+) -> dict:
     now = datetime.now(timezone.utc)
     month_ago = now - timedelta(days=30)
 
     recent_scans = []
     for scan in scan_docs:
+        if user_id and str(scan.get("userId", "")).strip() != user_id:
+            continue
+
         created_at = scan.get("createdAt") or scan.get("created_at")
         if isinstance(created_at, datetime):
             if created_at.tzinfo is None:
@@ -34,6 +44,9 @@ def _calculate_live_score(scan_docs: list[dict], chat_docs: list[dict]) -> dict:
 
     recent_chats = 0
     for item in chat_docs:
+        if user_id and str(item.get("userId", "")).strip() != user_id:
+            continue
+
         created_at = item.get("createdAt") or item.get("created_at")
         if isinstance(created_at, datetime):
             if created_at.tzinfo is None:
@@ -78,6 +91,7 @@ def _calculate_live_score(scan_docs: list[dict], chat_docs: list[dict]) -> dict:
             "safe_events": safe_events,
             "assistant_usage": recent_chats,
             "breach_hits": breach_hits,
+            "user_id": user_id or "",
         },
     }
 

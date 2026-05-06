@@ -40,7 +40,7 @@ def get_firestore_client():
     return firestore.client()
 
 
-def save_scan_result(scan_type: str, result: dict) -> None:
+def save_scan_result(scan_type: str, result: dict, user_id: str | None = None) -> None:
     try:
         db = get_firestore_client()
     except Exception as error:
@@ -52,13 +52,14 @@ def save_scan_result(scan_type: str, result: dict) -> None:
         "riskLevel": str(result.get("risk_level", "unknown")).lower(),
         "summary": str(result.get("summary", "")),
         "raw": result,
+        "userId": user_id or "",
         "createdAt": firestore.SERVER_TIMESTAMP,
     }
 
     db.collection("scan_results").add(payload)
 
 
-def save_assistant_activity(message: str) -> None:
+def save_assistant_activity(message: str, user_id: str | None = None) -> None:
     try:
         db = get_firestore_client()
     except Exception as error:
@@ -68,6 +69,7 @@ def save_assistant_activity(message: str) -> None:
     db.collection("assistant_activity").add(
         {
             "message": message,
+            "userId": user_id or "",
             "createdAt": firestore.SERVER_TIMESTAMP,
         }
     )

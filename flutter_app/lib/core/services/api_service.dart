@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
@@ -7,6 +8,8 @@ class ApiService {
     'API_BASE_URL',
     defaultValue: 'http://localhost:5000/api',
   );
+
+  String? get _currentUserId => FirebaseAuth.instance.currentUser?.uid;
 
   Future<Map<String, dynamic>> requestEmailOtp({
     required String email,
@@ -43,7 +46,10 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/scan/email'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'content': content}),
+      body: jsonEncode({
+        'content': content,
+        'user_id': _currentUserId,
+      }),
     );
 
     return jsonDecode(response.body);
@@ -53,7 +59,10 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/scan/url'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'url': url}),
+      body: jsonEncode({
+        'url': url,
+        'user_id': _currentUserId,
+      }),
     );
 
     return jsonDecode(response.body);
@@ -63,7 +72,10 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/breach/check'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'identifier': identifier}),
+      body: jsonEncode({
+        'identifier': identifier,
+        'user_id': _currentUserId,
+      }),
     );
 
     return jsonDecode(response.body);
@@ -74,10 +86,7 @@ class ApiService {
       Uri.parse('$baseUrl/score'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'password_strength': 90,
-        'training_completion': 72,
-        'breach_count': 1,
-        'risky_clicks': 0,
+        'user_id': _currentUserId,
       }),
     );
 
@@ -88,7 +97,10 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/chat'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'message': message}),
+      body: jsonEncode({
+        'message': message,
+        'user_id': _currentUserId,
+      }),
     );
 
     return jsonDecode(response.body);
